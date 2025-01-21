@@ -31,7 +31,7 @@
 
 ## 3. Example Usage:
 
-   In order to train the Regressor model on Rotterdam using GPU, run the following command:
+   In order to train the Regressor model on Rotterdam using CPU, run the following command:
   ```bash
-   python src/orchestrator.py --city Rotterdam --method reg --devide cuda 
+   python src/orchestrator.py --city Rotterdam --method reg --device cpu 
    ```
