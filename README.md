@@ -20,7 +20,7 @@
    To ensure compatibility, we provide a Dockerfile to run the model inside a container:
    ```bash
    docker build -t shared_mobility .
-   docker run -p 8000:8000 shared_mobility
+   docker run -p 8000:8000 -it shared_mobility /bin/bash
    ```
    > **_NOTE:_** If you plan to run this in a linux environment, you need to specify the platform flag `--platform linux/x86_64` during the build
  
