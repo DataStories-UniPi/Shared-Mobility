@@ -32,27 +32,88 @@ MODEL_MAP = {
     "reg": XGBRegressor(
         objective="reg:squarederror",
         tree_method="hist",
-        # device="cuda",
         n_jobs=-1,
+        seed=42,
     ),
     "classif": XGBClassifier(
         objective="multi:softmax",
         tree_method="hist",
-        # device="cuda",
         num_class=3,
         n_jobs=-1,
+        seed=42,
     ),
+}
+
+INVALID_COLS = {
+    "Rotterdam": [
+        "Bedrijventerrein Schieveen",
+        "Botlek",
+        "Hoek van Holland",
+        "Hoogvliet",
+        "Pernis",
+        "Rivium",
+        "Vondelingenplaat",
+        "Waalhaven",
+    ],
+    "Amsterdam": [
+        "Driemond",
+        "Kadoelen",
+        "Nellestein",
+        "Nieuwendammerdijk/Buiksloterdijk",
+        "Spieringhorn",
+        "Tuindorp Buiksloot",
+        "Tuindorp Nieuwendam",
+        "Waterland",
+    ],
+}
+
+PARAM_SPACE = {
+    # "n_estimators": Integer(100, 500),
+    "max_depth": Integer(6, 7),
+    # "learning_rate": Real(0.01, 0.2, prior="log-uniform"),
+    # "gamma": Real(0, 2, prior="uniform"),
+}
+scorer = {
+    "reg": make_scorer(mean_absolute_percentage_error, greater_is_better=False),
+    "classif": make_scorer(f1_score, average="macro", labels=[0, 1, 2], pos_label=[0]),
 }
 
 
 def main(
-    city: Literal["Amsterdam", "Rotterdam", "Hague"],
+    city: Literal["Amsterdam", "Rotterdam"],
     method: Literal["reg", "classif"],
-    cv,
+    device: Literal["cpu", "gpu"],
 ):
+    logger.info(f"Invalidated districts for {city}: {INVALID_COLS[city]}")
+
+    df = pd.read_csv(
+        RAW_DATA_DIR / f"{city.lower()}.csv",
+        header=0,
+        parse_dates=["timestamp"],
+    ).drop(columns=INVALID_COLS[city])
+
+    # Detect the 10 most crowded districts
+    top_k = (
+        df.loc[:, df.columns[1:].tolist()]
+        .mean()
+        .reset_index()
+        .rename(columns={0: "average", "index": "district_id"})
+        .nlargest(10, "average")["district_id"]
+        .tolist()
+    )
+
+    # Construct Adjacency Matrix
+    all_neighbors = {district: _find_neighbors(city, district) for district in top_k}
+
+    # Remove outliers from the data
+    detector = OutlierDetector(lower=25, upper=75, thresh=1.5)
+    for col in df.columns[1:]:
+        outliers_mask = detector._detect_outliers(df[col])
+        df[col] = df.loc[~outliers_mask, col]
 
     benchmarks = {}
     feature_importances = defaultdict(list)
+    cv = TimeSeriesSplit(n_splits=N_SPLITS)
 
     MAPPING = {"/": "_en_", " ": "_", "- ": "_"}
     FH = [5, 15, 30, 60]
@@ -84,6 +145,7 @@ def main(
             df_min[f"target_{fh}"],
             test_size=0.3,
             shuffle=False,
+            random_state=42,
         )
         print(X_train.head())
 
@@ -91,16 +153,17 @@ def main(
         X_test, y_test = transform_data(X_test, y_test, "timestamp")
 
         if method == "classif":
-            y_train, bins = create_crowd_levels(y_train, district)
+            y_train, bins = create_crowd_levels(y_train, n_bins=3, target=district)
             y_test = create_mask(y_test, bins)
             crowd_bins[district] = bins
 
-        model = MODEL_MAP[method]
+        model = MODEL_MAP[method].set_params(device=device)
+
         try:
             logger.info("Tuning hyperparameters")
             baeys_cv = BayesSearchCV(
                 model,
-                param_space,
+                PARAM_SPACE,
                 n_iter=30,
                 cv=cv,
                 scoring=scorer[method],
@@ -180,74 +243,34 @@ def main(
 
 if __name__ == "__main__":
     logger = configure_logger(log_file="orchestrator")
-    ts_cv = TimeSeriesSplit(n_splits=N_SPLITS)
 
-    CITIES = ["Rotterdam", "Amsterdam"]
-    METHODS = ["reg", "classif"]
-    CV_SPLITS = [ts_cv, ts_cv]
+    import argparse
 
-    param_space = {
-        "n_estimators": Integer(100, 500),
-        "max_depth": Integer(3, 7),
-        "learning_rate": Real(0.01, 0.2, prior="log-uniform"),
-        "gamma": Real(0, 2, prior="uniform"),
-    }
-    scorer = {
-        "reg": make_scorer(mean_absolute_percentage_error, greater_is_better=False),
-        "classif": make_scorer(f1_score, average="macro", labels=[0, 1, 2], pos_label=[0]),
-    }
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--city",
+        type=str,
+        help="Select city to run experiment on",
+        choices=["Amsterdam", "Rotterdam"],
+        default="Rotterdam",
+    )
+    parser.add_argument(
+        "--method",
+        type=str,
+        help="Select the model variation",
+        choices=["reg", "classif"],
+        default="reg",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        help="Select whether you want to use CPU or GPU",
+        choices=["cpu", "cuda"],
+        default="cpu",
+    )
+    args = parser.parse_args()
 
-    detector = OutlierDetector(lower=25, upper=75, thresh=1.5)
+    kwargs = {k: v for k, v in vars(args).items() if v is not None}
 
-    invalid_columns = {
-        "Rotterdam": [
-            "Bedrijventerrein Schieveen",
-            "Botlek",
-            "Hoek van Holland",
-            "Hoogvliet",
-            "Pernis",
-            "Rivium",
-            "Vondelingenplaat",
-            "Waalhaven",
-        ],
-        "Amsterdam": [
-            "Driemond",
-            "Kadoelen",
-            "Nellestein",
-            "Nieuwendammerdijk/Buiksloterdijk",
-            "Spieringhorn",
-            "Tuindorp Buiksloot",
-            "Tuindorp Nieuwendam",
-            "Waterland",
-        ],
-    }
-
-    for city in CITIES:
-        logger.info(f"Invalidated districts for {city}: {invalid_columns[city]}")
-        df = pd.read_csv(
-            RAW_DATA_DIR / f"{city}.csv",
-            header=0,
-            parse_dates=["timestamp"],
-        ).drop(columns=invalid_columns[city])
-
-        top_k = (
-            df.loc[:, df.columns[1:].tolist()]
-            .mean()
-            .reset_index()
-            .rename(columns={0: "average", "index": "district_id"})
-            .nlargest(10, "average")["district_id"]
-            .tolist()
-        )
-
-        all_neighbors = {district: _find_neighbors(city, district) for district in top_k}
-
-        # Remove outliers
-        for col in df.columns[1:]:
-            outliers_mask = detector._detect_outliers(df[col])
-            df[col] = df.loc[~outliers_mask, col]
-
-        for method, cv in zip(METHODS, CV_SPLITS):
-            kwargs = {"city": city, "method": method, "cv": cv}
-
-            logger.debug(f"Executing main with kwargs: {kwargs}")
-            main(**kwargs)
+    logger.debug(f"Executing main with kwargs: {kwargs}")
+    main(**kwargs)
