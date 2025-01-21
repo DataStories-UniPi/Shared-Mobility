@@ -18,5 +18,5 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # Use a dynamic entry point for flexibility
-ENTRYPOINT ["python"]
-CMD ["src/orchestrator.py"]
+CMD ["python", "src/orchestrator.py"]
+

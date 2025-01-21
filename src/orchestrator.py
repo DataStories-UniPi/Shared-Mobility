@@ -75,7 +75,7 @@ PARAM_SPACE = {
 }
 scorer = {
     "reg": make_scorer(mean_absolute_percentage_error, greater_is_better=False),
-    "classif": make_scorer(f1_score, average="macro", labels=[0, 1, 2], pos_label=[0]),
+    "classif": make_scorer(f1_score, average="macro", labels=list(range(3))),
 }
 
 
@@ -161,51 +161,69 @@ def main(
 
         try:
             logger.info("Tuning hyperparameters")
-            baeys_cv = BayesSearchCV(
-                model,
-                PARAM_SPACE,
-                n_iter=30,
-                cv=cv,
-                scoring=scorer[method],
-                n_jobs=1,
-                random_state=42,
-            )
 
-            start_time = time.time()
-            baeys_cv.fit(X_train, y_train)
-            tune_time = time.time() - start_time
-            logger.info(f"Local tuning time: {tune_time:.3f} seconds")
+            # Hyperparameter tuning using BayesSearchCV
+            try:
+                baeys_cv = BayesSearchCV(
+                    model,
+                    PARAM_SPACE,
+                    n_iter=10,
+                    cv=cv,
+                    scoring=scorer[method],
+                    n_jobs=1,
+                    random_state=42,
+                )
 
-            best_params = baeys_cv.best_params_
-            model.set_params(**best_params)
+                start_time = time.time()
+                baeys_cv.fit(X_train, y_train)
+                tune_time = time.time() - start_time
+                logger.info(f"Local tuning time: {tune_time:.3f} seconds")
 
-            logger.debug("Training")
-            start_time = time.time()
-            model.fit(X_train, y_train)
-            train_time = time.time() - start_time
+                best_params = baeys_cv.best_params_
+                model.set_params(**best_params)
+            except Exception as e:
+                logger.error(f"Error during hyperparameter tuning: {e}")
+                raise
 
-            MODEL_ID = f"{model_label}_{fh}"
-            model_path = MODEL_DIR / EXPERIMENT_ID / model_label / f"{MODEL_ID}.joblib"
-            joblib.dump(model, model_path)
+            logger.debug("Training model")
+            try:
+                start_time = time.time()
+                model.fit(X_train, y_train)
+                train_time = time.time() - start_time
+            except Exception as e:
+                logger.error(f"Error during model training: {e}")
+                raise
+            try:
+                MODEL_ID = f"{model_label}_{fh}"
+                model_path = MODEL_DIR / EXPERIMENT_ID / model_label / f"{MODEL_ID}.joblib"
+                joblib.dump(model, model_path)
+                logger.info(f"Model saved at root folder: {EXPERIMENT_DIR.name}")
+                logger.debug(f"Leaf path: {model_label}/{MODEL_ID}")
+            except Exception as e:
+                logger.error(f"Error saving model: {e}")
+                raise
 
-            logger.info(f"Model saved at root folder: {EXPERIMENT_DIR.name}")
-            logger.debug(f"Leaf path: {model_label}/{MODEL_ID}")
             logger.debug("Evaluating performance")
+            try:
+                start_time = time.time()
+                y_pred = model.predict(X_test)
+                inference_time = time.time() - start_time
 
-            start_time = time.time()
-            y_pred = model.predict(X_test)
-            inference_time = time.time() - start_time
-            result = evaluate(y_test, y_pred, method)
+                result = evaluate(y_test, y_pred, method)
+                result["Tuning"] = tune_time
+                result["Train"] = train_time
+                result["Inference"] = inference_time
 
-            result["Tuning"] = tune_time
-            result["Train"] = train_time
-            result["Inference"] = inference_time
+                benchmarks[(district, fh)] = result
+            except Exception as e:
+                logger.error(f"Error during evaluation: {e}")
+                raise
 
-            benchmarks[(district, fh)] = result
-        except Exception as e:
-            logger.error(f"Cannot evaluate model on test set | Skipping model | {e}")
-            shutil.rmtree(MODEL_DIR / EXPERIMENT_ID / model_label)
-            continue
+        except Exception as main_e:
+            logger.critical(
+                f"Critical failure in the tuning, training, or evaluation process: {main_e}"
+            )
+            raise
 
         logger.info("Extracting feature importances")
         names = replace_substrings(X_train.columns.tolist(), neighbors, district)

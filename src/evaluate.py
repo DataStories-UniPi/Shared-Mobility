@@ -84,14 +84,16 @@ def evaluate(y_true, y_pred, method):
         metrics["MAE"] = mean_absolute_error(y_true, y_pred)
         metrics["sMAPE"] = mean_absolute_percentage_error(y_true, y_pred)
     else:
+        labels = list(range(3))
+
         if len(np.unique(y_true)) < 3 or len(np.unique(y_pred)) < 3:
             le = LabelEncoder()
             y_true = le.fit_transform(y_true)
             y_pred = le.transform(y_pred)
 
-        metrics["F1"] = f1_score(y_true, y_pred, average="macro")
         metrics["Accuracy"] = accuracy_score(y_true, y_pred)
-        metrics["Precision"] = precision_score(y_true, y_pred, average="macro")
-        metrics["Recall"] = recall_score(y_true, y_pred, average="macro")
+        metrics["F1"] = f1_score(y_true, y_pred, average="macro", labels=labels)
+        metrics["Recall"] = recall_score(y_true, y_pred, average="macro", labels=labels)
+        metrics["Precision"] = precision_score(y_true, y_pred, average="macro", labels=labels)
 
     return metrics
