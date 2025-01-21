@@ -68,10 +68,10 @@ INVALID_COLS = {
 }
 
 PARAM_SPACE = {
-    # "n_estimators": Integer(100, 500),
-    "max_depth": Integer(6, 7),
-    # "learning_rate": Real(0.01, 0.2, prior="log-uniform"),
-    # "gamma": Real(0, 2, prior="uniform"),
+    "n_estimators": Integer(100, 500),
+    "max_depth": Integer(3, 7),
+    "learning_rate": Real(0.01, 0.2, prior="log-uniform"),
+    "gamma": Real(0, 2, prior="uniform"),
 }
 scorer = {
     "reg": make_scorer(mean_absolute_percentage_error, greater_is_better=False),
