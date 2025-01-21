@@ -8,7 +8,21 @@ import config as config
 
 
 def _find_neighbors(city: str = config.CITY, target: str = config.TARGET) -> List[str]:
+    """
+    Find neighbors of a target location in a GeoJSON file.
 
+    Parameters
+    ----------
+    city : str, optional
+        City name. Default is the value of the CITY variable in the config module.
+    target : str, optional
+        Target location name. Default is the value of the TARGET variable in the config module.
+
+    Returns
+    -------
+    List[str]
+        List of neighbors of the target location.
+    """
     geojson_path = config.EXTERNAL_DATA_DIR / f"{city.lower()}_.geojson"
     gdf = gpd.read_file(geojson_path)
     source_idx, _ = gdf.loc[gdf["name"] == target].sindex.query(
@@ -26,7 +40,9 @@ def _find_neighbors(city: str = config.CITY, target: str = config.TARGET) -> Lis
 
 
 def extract_neighbors(
-    df: pd.DataFrame, neighbors: List[str], mandatory_columns: List[str] = ["timestamp"]
+    df: pd.DataFrame,
+    neighbors: List[str],
+    mandatory_columns: List[str] = ["timestamp"],
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
     Extract specified columns from the DataFrame while handling missing columns gracefully.

@@ -89,9 +89,13 @@ def parse_name(text: str, replacements: Dict[str, str]) -> str:
     return pattern.sub(lambda match: replacements[match.group(0)], text)
 
 
-def create_crowd_levels(data: pd.Series, target: str) -> Tuple[pd.Series, List[int]]:
+def create_crowd_levels(
+    data: pd.Series,
+    n_bins: int,
+    target: str,
+) -> Tuple[pd.Series, List[int]]:
 
-    out = pd.qcut(data.rank(method="first"), q=3, labels=list(range(3)))
+    out = pd.qcut(data.rank(method="first"), q=n_bins, labels=list(range(3)))
 
     crowd_bins = (
         pd.DataFrame([out, data], index=["label", target])
