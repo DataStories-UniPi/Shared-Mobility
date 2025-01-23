@@ -177,4 +177,5 @@ cython_debug/
 .dockerignore
 Singularity.def
 src/orchestrator_old.py
-benchmarks/**
+benchmarks
+archive

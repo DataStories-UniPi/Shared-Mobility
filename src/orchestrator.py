@@ -167,7 +167,7 @@ def main(
                 baeys_cv = BayesSearchCV(
                     model,
                     PARAM_SPACE,
-                    n_iter=10,
+                    n_iter=30,
                     cv=cv,
                     scoring=scorer[method],
                     n_jobs=1,
