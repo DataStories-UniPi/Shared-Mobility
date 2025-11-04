@@ -18,7 +18,7 @@ The **MoDE‑Boost** framework provides a end‑to‑end pipeline for extracting
       - [3.2.1. NL datasets](#321-nl-datasets)
       - [3.2.2. US datasets (CitiNYC / Divvy)](#322-us-datasets-citinyc--divvy)
     - [3.3. Training \& evaluation](#33-training--evaluation)
-  - [1.5. License](#15-license)
+  - [4. License](#4-license)
 
 ---
 
@@ -27,26 +27,26 @@ The **MoDE‑Boost** framework provides a end‑to‑end pipeline for extracting
 ```text
 project-root/
 ├─ data/
-│   ├─ external/          # External data sources (unchanged by the project)
-│   ├─ raw/               # Original, untouched data
-│   ├─ interim/           # Intermediate, cleaned data
-│   ├─ processed/         # Final ML‑ready datasets
-│   └─ make_dataset.py    # Optional preprocessing pipelines
-├─ docs/                  # Documentation files
-├─ logs/                  # Log files generated at runtime
-├─ models/                # Trained model artifacts
-├─ reports/               # Generated reports, figures and benchmarks
+│   ├─ external/                # External data sources (unchanged by the project)
+│   ├─ raw/                     # Original, untouched data
+│   ├─ interim/                 # Intermediate, cleaned data
+│   ├─ processed/               # Final ML‑ready datasets
+│   └─ make_dataset.py          # Optional preprocessing pipelines
+├─ docs/                        # Documentation files
+├─ logs/                        # Log files generated at runtime
+├─ models/                      # Trained model artifacts
+├─ reports/                     # Generated reports, figures and benchmarks
 │   ├─ __init__.py
-│   ├─ benchmarks/        # Benchmark results
-│   └─ figures/           # Plots and visualisations
+│   ├─ benchmarks/              # Benchmark results
+│   └─ figures/                 # Plots and visualisations
 ├─ src/
 │   ├─ __init__.py
-│   ├─ config/            # Global configuration helpers
+│   ├─ config/                  # Global configuration helpers
 │   │   ├─ __init__.py
-│   │   ├─ env.py         # Loads environment variables from `.env`
-│   │   ├─ constants.py   # Core constants used throughout the repo
-│   │   └─ paths.py       # Centralised pathlib definitions
-│   ├─ components/        # Feature‑engineering modules
+│   │   ├─ env.py               # Loads environment variables from `.env`
+│   │   ├─ constants.py         # Core constants used throughout the repo
+│   │   └─ paths.py             # Centralised pathlib definitions
+│   ├─ components/              # Feature‑engineering modules
 │   │   ├─ __init__.py
 │   │   ├─ fourier_transformer.py
 │   │   ├─ group_transformer.py
@@ -54,7 +54,7 @@ project-root/
 │   │   ├─ rbf_transformer.py
 │   │   ├─ temporal_extractor.py
 │   │   └─ traffic_adjuster.py
-│   ├─ data/              # Data loading & preprocessing utilities
+│   ├─ data/                    # Data loading & preprocessing utilities
 │   │   ├─ __init__.py
 │   │   ├─ cleaner/
 │   │   │   ├─ __init__.py
@@ -84,9 +84,9 @@ project-root/
 │       ├─ __init__.py
 │       ├─ helper.py
 │       ├─ models.py
-│       └─ logger.py        # Loguru‑based logger configuration
-├─ .env                     # Environment variables (see``.env.example`)
-└─ pyproject.toml           # Packaging and dependency definition
+│       └─ logger.py            # Loguru‑based logger configuration
+├─ .env                         # Environment variables
+└─ pyproject.toml               # Packaging and dependency definition
 ```
 
 ---
@@ -119,7 +119,7 @@ python src/data/loader/bike_loader.py \
 * `--bucket_name` – corresponding S3 bucket.
 * `--year` – year of interest.
 
-For the Dutch datasets, download the archives from the provided cloud location and place them under `data/interim/<city>/` (e.g., `data/interim/amsterdam/`).
+For the Dutch datasets, download the archives from the [provided](https://datastories.cs.unipi.gr/index.php/s/W6JNDRX4o8aJpm6) cloud location and place them under `data/interim/<city>/` (e.g., `data/interim/amsterdam/`).
 
 ---
 
@@ -201,7 +201,7 @@ python src/model/optuna.py
 
 ---
 
-## 1.5. License
+## 4. License
 
 The project is licensed under the **BSD 3‑Clause License**. See the `LICENSE` file for the full text.
 
